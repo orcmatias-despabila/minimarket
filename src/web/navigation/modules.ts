@@ -327,7 +327,9 @@ export const getWebModuleById = (moduleId: WebModuleId) =>
   webModules.find((module) => module.id === moduleId)
 
 export const getWebModuleByPath = (pathname: string) =>
-  webModules.find((module) => pathname === module.path || pathname.startsWith(`${module.path}/`))
+  [...webModules]
+    .sort((left, right) => right.path.length - left.path.length)
+    .find((module) => pathname === module.path || pathname.startsWith(`${module.path}/`))
 
 export const canAccessWebModule = (
   module: WebModuleDefinition,

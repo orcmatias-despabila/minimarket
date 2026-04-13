@@ -60,6 +60,8 @@ const modulePages: Record<WebModuleId, ReactNode> = {
   cash: <CashPage />,
 }
 
+const toChildPath = (path: string) => path.replace(/^\//, '')
+
 export function WebAppRouter() {
   const { isAuthenticated, isLoading: isAuthLoading } = useWebAuth()
   const {
@@ -116,7 +118,7 @@ export function WebAppRouter() {
             {webModules.map((module) => (
               <Route
                 key={module.id}
-                path={module.path}
+                path={toChildPath(module.path)}
                 element={
                   canAccess(module.id) ? (
                     modulePages[module.id]
@@ -127,7 +129,7 @@ export function WebAppRouter() {
               />
             ))}
             <Route
-              path="/credit-notes/new"
+              path="credit-notes/new"
               element={
                 canAccess('credit-notes') ? (
                   <CreditNoteUpsertPage />
@@ -137,7 +139,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/credit-notes/:noteId"
+              path="credit-notes/:noteId"
               element={
                 canAccess('credit-notes') ? (
                   <CreditNoteDetailPage />
@@ -147,7 +149,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/credit-notes/:noteId/edit"
+              path="credit-notes/:noteId/edit"
               element={
                 canAccess('credit-notes') ? (
                   <CreditNoteUpsertPage />
@@ -157,7 +159,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/issued-documents/new"
+              path="issued-documents/new"
               element={
                 canAccess('issued-documents') ? (
                   <IssuedDocumentUpsertPage />
@@ -167,7 +169,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/issued-documents/:documentId"
+              path="issued-documents/:documentId"
               element={
                 canAccess('issued-documents') ? (
                   <IssuedDocumentDetailPage />
@@ -177,7 +179,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/issued-documents/:documentId/edit"
+              path="issued-documents/:documentId/edit"
               element={
                 canAccess('issued-documents') ? (
                   <IssuedDocumentUpsertPage />
@@ -187,7 +189,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/employees/new"
+              path="employees/new"
               element={
                 canAccess('employees') ? (
                   <EmployeeUpsertPage />
@@ -197,7 +199,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/employees/:employeeId"
+              path="employees/:employeeId"
               element={
                 canAccess('employees') ? (
                   <EmployeeDetailPage />
@@ -207,7 +209,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/employees/:employeeId/edit"
+              path="employees/:employeeId/edit"
               element={
                 canAccess('employees') ? (
                   <EmployeeUpsertPage />
@@ -217,7 +219,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/roles/new"
+              path="roles/new"
               element={
                 canAccess('roles') ? (
                   <RoleUpsertPage />
@@ -227,7 +229,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/roles/:roleId/edit"
+              path="roles/:roleId/edit"
               element={
                 canAccess('roles') ? (
                   <RoleUpsertPage />
@@ -237,7 +239,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/roles/:roleId/permissions"
+              path="roles/:roleId/permissions"
               element={
                 canAccess('roles') ? (
                   <RolePermissionsPage />
@@ -247,7 +249,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/received-documents/new"
+              path="received-documents/new"
               element={
                 canAccess('received-documents') ? (
                   <ReceivedDocumentUpsertPage />
@@ -257,7 +259,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/received-documents/:documentId"
+              path="received-documents/:documentId"
               element={
                 canAccess('received-documents') ? (
                   <ReceivedDocumentDetailPage />
@@ -267,7 +269,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/received-documents/:documentId/edit"
+              path="received-documents/:documentId/edit"
               element={
                 canAccess('received-documents') ? (
                   <ReceivedDocumentUpsertPage />
@@ -277,7 +279,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/clients/new"
+              path="clients/new"
               element={
                 canAccess('clients') ? (
                   <ClientUpsertPage />
@@ -287,7 +289,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/clients/:clientId"
+              path="clients/:clientId"
               element={
                 canAccess('clients') ? (
                   <ClientDetailPage />
@@ -297,7 +299,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/clients/:clientId/edit"
+              path="clients/:clientId/edit"
               element={
                 canAccess('clients') ? (
                   <ClientUpsertPage />
@@ -307,7 +309,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/suppliers/new"
+              path="suppliers/new"
               element={
                 canAccess('suppliers') ? (
                   <SupplierUpsertPage />
@@ -317,7 +319,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/suppliers/:supplierId"
+              path="suppliers/:supplierId"
               element={
                 canAccess('suppliers') ? (
                   <SupplierDetailPage />
@@ -327,7 +329,7 @@ export function WebAppRouter() {
               }
             />
             <Route
-              path="/suppliers/:supplierId/edit"
+              path="suppliers/:supplierId/edit"
               element={
                 canAccess('suppliers') ? (
                   <SupplierUpsertPage />
