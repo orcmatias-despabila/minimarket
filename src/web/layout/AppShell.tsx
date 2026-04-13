@@ -463,7 +463,7 @@ export function WebAppShell() {
           </div>
         </header>
 
-        <div key={location.pathname} className="content-area__inner">
+        <div key={`${location.pathname}${location.search}`} className="content-area__inner">
           <Outlet />
         </div>
       </main>

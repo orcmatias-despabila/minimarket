@@ -62,6 +62,11 @@ const modulePages: Record<WebModuleId, ComponentType> = {
 
 const toChildPath = (path: string) => path.replace(/^\//, '')
 
+const renderModulePage = (moduleId: WebModuleId) => {
+  const ModulePage = modulePages[moduleId]
+  return <ModulePage key={moduleId} />
+}
+
 export function WebAppRouter() {
   const { isAuthenticated, isLoading: isAuthLoading } = useWebAuth()
   const {
@@ -121,10 +126,7 @@ export function WebAppRouter() {
                 path={toChildPath(module.path)}
                 element={
                   canAccess(module.id) ? (
-                    (() => {
-                      const ModulePage = modulePages[module.id]
-                      return <ModulePage />
-                    })()
+                    renderModulePage(module.id)
                   ) : (
                     <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
                   )
