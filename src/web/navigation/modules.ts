@@ -326,6 +326,9 @@ export const webModules: WebModuleDefinition[] = [
 export const getWebModuleById = (moduleId: WebModuleId) =>
   webModules.find((module) => module.id === moduleId)
 
+export const getWebModulePathById = (moduleId: WebModuleId) =>
+  getWebModuleById(moduleId)?.path
+
 export const getWebModuleByPath = (pathname: string) =>
   [...webModules]
     .sort((left, right) => right.path.length - left.path.length)

@@ -4,6 +4,7 @@ import { useWebAuth } from './auth/AuthProvider'
 import { WebAppShell } from './layout/AppShell'
 import {
   canAccessWebModule,
+  getWebModulePathById,
   type WebModuleId,
   webModules,
 } from './navigation/modules'
@@ -89,6 +90,7 @@ export function WebAppRouter() {
   const visibleModules = webModules.filter((module) =>
     canAccessWebModule(module, { currentRole, hasPermission }),
   )
+  const fallbackDashboardPath = getWebModulePathById('dashboard') ?? '/dashboard'
   const defaultRoute = visibleModules.find((module) => module.id === 'dashboard') ?? visibleModules[0]
   const shouldBlockForWorkspace =
     isWorkspaceLoading && !business && pendingInvitations.length === 0
@@ -116,10 +118,10 @@ export function WebAppRouter() {
       ) : (
         <Routes>
           <Route path="/" element={<WebAppShell />}>
-            <Route
-              index
-              element={<Navigate to={defaultRoute?.path ?? '/dashboard'} replace />}
-            />
+              <Route
+                index
+                element={<Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />}
+              />
             {webModules.map((module) => (
               <Route
                 key={module.id}
@@ -128,7 +130,7 @@ export function WebAppRouter() {
                   canAccess(module.id) ? (
                     renderModulePage(module.id)
                   ) : (
-                    <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                    <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                   )
                 }
               />
@@ -139,7 +141,7 @@ export function WebAppRouter() {
                 canAccess('credit-notes') ? (
                   <CreditNoteUpsertPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -149,7 +151,7 @@ export function WebAppRouter() {
                 canAccess('credit-notes') ? (
                   <CreditNoteDetailPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -159,7 +161,7 @@ export function WebAppRouter() {
                 canAccess('credit-notes') ? (
                   <CreditNoteUpsertPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -169,7 +171,7 @@ export function WebAppRouter() {
                 canAccess('issued-documents') ? (
                   <IssuedDocumentUpsertPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -179,7 +181,7 @@ export function WebAppRouter() {
                 canAccess('issued-documents') ? (
                   <IssuedDocumentDetailPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -189,7 +191,7 @@ export function WebAppRouter() {
                 canAccess('issued-documents') ? (
                   <IssuedDocumentUpsertPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -199,7 +201,7 @@ export function WebAppRouter() {
                 canAccess('employees') ? (
                   <EmployeeUpsertPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -209,7 +211,7 @@ export function WebAppRouter() {
                 canAccess('employees') ? (
                   <EmployeeDetailPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -219,7 +221,7 @@ export function WebAppRouter() {
                 canAccess('employees') ? (
                   <EmployeeUpsertPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -229,7 +231,7 @@ export function WebAppRouter() {
                 canAccess('roles') ? (
                   <RoleUpsertPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -239,7 +241,7 @@ export function WebAppRouter() {
                 canAccess('roles') ? (
                   <RoleUpsertPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -249,7 +251,7 @@ export function WebAppRouter() {
                 canAccess('roles') ? (
                   <RolePermissionsPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -259,7 +261,7 @@ export function WebAppRouter() {
                 canAccess('received-documents') ? (
                   <ReceivedDocumentUpsertPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -269,7 +271,7 @@ export function WebAppRouter() {
                 canAccess('received-documents') ? (
                   <ReceivedDocumentDetailPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -279,7 +281,7 @@ export function WebAppRouter() {
                 canAccess('received-documents') ? (
                   <ReceivedDocumentUpsertPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -289,7 +291,7 @@ export function WebAppRouter() {
                 canAccess('clients') ? (
                   <ClientUpsertPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -299,7 +301,7 @@ export function WebAppRouter() {
                 canAccess('clients') ? (
                   <ClientDetailPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -309,7 +311,7 @@ export function WebAppRouter() {
                 canAccess('clients') ? (
                   <ClientUpsertPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -319,7 +321,7 @@ export function WebAppRouter() {
                 canAccess('suppliers') ? (
                   <SupplierUpsertPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -329,7 +331,7 @@ export function WebAppRouter() {
                 canAccess('suppliers') ? (
                   <SupplierDetailPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
@@ -339,13 +341,13 @@ export function WebAppRouter() {
                 canAccess('suppliers') ? (
                   <SupplierUpsertPage />
                 ) : (
-                  <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
+                  <Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />
                 )
               }
             />
             <Route
               path="*"
-              element={<Navigate to={defaultRoute?.path ?? '/dashboard'} replace />}
+              element={<Navigate to={defaultRoute?.path ?? fallbackDashboardPath} replace />}
             />
           </Route>
         </Routes>

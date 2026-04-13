@@ -4,11 +4,13 @@ import { Button } from '../../components/ui/Button'
 import { Field } from '../../components/ui/Field'
 import { useWebAuth } from '../auth/AuthProvider'
 import { isWebSupabaseConfigured } from '../lib/supabase'
+import { getWebModulePathById } from '../navigation/modules'
 
 type AuthMode = 'login' | 'register'
 
 export function AuthPage() {
   const navigate = useNavigate()
+  const dashboardPath = getWebModulePathById('dashboard') ?? '/dashboard'
   const {
     signIn,
     signUp,
@@ -70,7 +72,7 @@ export function AuthPage() {
         }
       } else {
         await signIn({ email: normalizedEmail, password })
-        navigate('/dashboard', { replace: true })
+        navigate(dashboardPath, { replace: true })
       }
     } catch (error) {
       setErrorMessage(

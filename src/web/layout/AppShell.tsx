@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import {
   canAccessWebModule,
+  getWebModulePathById,
   getWebModuleByPath,
   webModules,
   webNavigationAreas,
@@ -110,8 +111,9 @@ export function WebAppShell() {
     [visibleModules],
   )
 
+  const dashboardPath = getWebModulePathById('dashboard') ?? '/dashboard'
   const breadcrumbTrail = [
-    { label: 'Minimarket', href: '/dashboard' },
+    { label: 'Minimarket', href: dashboardPath },
     { label: activeArea?.label ?? 'Panel' },
     { label: activeModule?.sectionLabel ?? 'General' },
     { label: activeModule?.label ?? 'Panel' },
