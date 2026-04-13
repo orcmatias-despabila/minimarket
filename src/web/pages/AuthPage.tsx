@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Field } from '../../components/ui/Field'
 import { useWebAuth } from '../auth/AuthProvider'
@@ -7,6 +8,7 @@ import { isWebSupabaseConfigured } from '../lib/supabase'
 type AuthMode = 'login' | 'register'
 
 export function AuthPage() {
+  const navigate = useNavigate()
   const {
     signIn,
     signUp,
@@ -68,6 +70,7 @@ export function AuthPage() {
         }
       } else {
         await signIn({ email: normalizedEmail, password })
+        navigate('/dashboard', { replace: true })
       }
     } catch (error) {
       setErrorMessage(
