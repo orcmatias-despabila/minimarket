@@ -15,13 +15,20 @@ import { useWebWorkspace } from '../workspace/WorkspaceProvider'
 
 const inviteRoleOptions: UserRole[] = ['admin', 'cashier', 'inventory']
 const editableRoleOptions: UserRole[] = ['admin', 'cashier', 'inventory']
+const accessStatusOptions = ['todos', 'activos', 'pendientes'] as const
 
 const roleLabels: Record<UserRole, string> = {
-  owner: 'Owner',
-  admin: 'Admin',
+  owner: 'Propietario',
+  admin: 'Administrador',
   cashier: 'Caja',
   inventory: 'Inventario',
 }
+
+const normalizeText = (value?: string | null) =>
+  (value ?? '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
 
 export function TeamPage() {
   const navigate = useNavigate()
@@ -39,6 +46,9 @@ export function TeamPage() {
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [selectedRole, setSelectedRole] = useState<UserRole>('cashier')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] =
+    useState<(typeof accessStatusOptions)[number]>('todos')
   const [feedback, setFeedback] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -55,12 +65,74 @@ export function TeamPage() {
     [members],
   )
 
+  const pendingInvitationEmails = useMemo(
+    () => new Set(invitations.map((item) => normalizeText(item.email))),
+    [invitations],
+  )
+
+  const filteredMembers = useMemo(() => {
+    const search = normalizeText(searchTerm)
+
+    return members.filter((memberItem) => {
+      const labelParts = [
+        ownerIdSet.has(memberItem.userId) ? 'propietario principal' : `usuario ${memberItem.userId.slice(0, 8)}`,
+        roleLabels[memberItem.role],
+        memberItem.visibleCode ?? '',
+      ]
+      const matchesSearch = !search || normalizeText(labelParts.join(' ')).includes(search)
+      const hasPendingInvitation = pendingInvitationEmails.has(normalizeText(memberItem.userId))
+
+      if (!matchesSearch) {
+        return false
+      }
+
+      if (statusFilter === 'activos') {
+        return !hasPendingInvitation
+      }
+
+      if (statusFilter === 'pendientes') {
+        return hasPendingInvitation
+      }
+
+      return true
+    })
+  }, [members, ownerIdSet, pendingInvitationEmails, searchTerm, statusFilter])
+
+  const filteredInvitations = useMemo(() => {
+    const search = normalizeText(searchTerm)
+
+    return invitations.filter((invitation) => {
+      const invitationLabel = `${invitation.fullName ?? ''} ${invitation.email} ${
+        roleLabels[invitation.role]
+      } ${invitation.status}`
+
+      if (!search) {
+        return statusFilter !== 'activos'
+      }
+
+      return normalizeText(invitationLabel).includes(search) && statusFilter !== 'activos'
+    })
+  }, [invitations, searchTerm, statusFilter])
+
+  const activeMembersCount = useMemo(() => {
+    if (!pendingInvitationEmails.size) {
+      return members.length
+    }
+
+    return members.filter((memberItem) => !pendingInvitationEmails.has(normalizeText(memberItem.userId))).length
+  }, [members, pendingInvitationEmails])
+
+  const futureImprovements = [
+    'Historial de acceso por usuario con último ingreso, suspensión y reactivación.',
+    'Acciones rápidas para reenviar invitación, suspender acceso o filtrar por rol.',
+  ]
+
   const handleInvite = async () => {
     setFeedback(null)
     setErrorMessage(null)
 
     if (!canInvite) {
-      setErrorMessage('Solo owner o admin pueden invitar usuarios.')
+      setErrorMessage('Solo propietario o administrador pueden invitar usuarios.')
       return
     }
 
@@ -90,20 +162,20 @@ export function TeamPage() {
             entityId: email.trim().toLowerCase(),
             entityLabel: fullName.trim() || email.trim().toLowerCase(),
             action: 'create',
-            summary: `Invitacion creada para ${email.trim().toLowerCase()} con rol ${roleLabels[selectedRole]}.`,
+            summary: `Invitación creada para ${email.trim().toLowerCase()} con rol ${roleLabels[selectedRole]}.`,
           })
         } catch {
-          // No bloqueamos la gestion de equipo si auditoria no esta disponible.
+          // La auditoría no debe bloquear la gestión de accesos.
         }
       }
 
       setEmail('')
       setFullName('')
       setSelectedRole('cashier')
-      setFeedback('Invitacion creada correctamente.')
+      setFeedback('Invitación creada correctamente.')
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : 'No pudimos enviar la invitacion.',
+        error instanceof Error ? error.message : 'No pudimos enviar la invitación.',
       )
     } finally {
       setIsSubmitting(false)
@@ -170,7 +242,7 @@ export function TeamPage() {
             summary: `Accesos actualizados para miembro ${memberId.slice(0, 8)} con rol ${roleLabels[nextRole]}.`,
           })
         } catch {
-          // La auditoria es complementaria y no debe romper la actualizacion.
+          // La auditoría es complementaria y no debe romper la actualización.
         }
       }
 
@@ -184,10 +256,10 @@ export function TeamPage() {
         delete next[memberId]
         return next
       })
-      setFeedback('Permisos actualizados correctamente.')
+      setFeedback('Accesos actualizados correctamente.')
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : 'No pudimos actualizar permisos.',
+        error instanceof Error ? error.message : 'No pudimos actualizar los accesos.',
       )
     } finally {
       setSavingMemberId(null)
@@ -197,37 +269,34 @@ export function TeamPage() {
   if (!canInvite) {
     return (
       <section className="surface-card admin-empty-state">
-        <p className="section-kicker">Equipo</p>
+        <p className="section-kicker">Usuarios y accesos</p>
         <h3>Acceso restringido</h3>
-        <p>Solo owner o admin pueden gestionar el equipo y las invitaciones.</p>
+        <p>Solo propietario o administrador pueden gestionar accesos e invitaciones.</p>
       </section>
     )
   }
 
   return (
     <section className="admin-web">
-      <AdminNotice
-        tone="info"
-        title="Modulo transitorio"
-      >
-        Equipo sigue administrando invitaciones y membresias del negocio. La ficha del trabajador ahora vive en Personal y los permisos administrativos granulares se gestionan en Roles y permisos.
+      <AdminNotice tone="info" title="Accesos del negocio">
+        Esta vista se enfoca en usuarios, invitaciones y permisos de entrada al sistema. La información laboral sigue en Personal y la definición de permisos administrativos vive en Roles y permisos.
       </AdminNotice>
 
       <div className="dashboard-kpis">
         <article className="surface-card dashboard-kpi">
-          <span>Miembros</span>
-          <strong>{members.length}</strong>
-          <p>Usuarios asociados actualmente al negocio.</p>
+          <span>Usuarios con acceso</span>
+          <strong>{activeMembersCount}</strong>
+          <p>Personas con acceso visible al negocio.</p>
         </article>
         <article className="surface-card dashboard-kpi">
-          <span>Invitaciones</span>
+          <span>Invitaciones pendientes</span>
           <strong>{invitations.length}</strong>
-          <p>Invitaciones creadas y visibles para este negocio.</p>
+          <p>Accesos aún pendientes de aceptación.</p>
         </article>
         <article className="surface-card dashboard-kpi">
           <span>Rol actual</span>
           <strong>{currentRole ? roleLabels[currentRole] : 'Sin rol'}</strong>
-          <p>El acceso visible depende de tus permisos efectivos.</p>
+          <p>Tu visibilidad depende de los permisos asignados.</p>
         </article>
       </div>
 
@@ -235,9 +304,9 @@ export function TeamPage() {
         <section className="surface-card">
           <div className="admin-form-banner">
             <div>
-              <strong>Compatibilidad temporal activa</strong>
+              <strong>Invitar en pocos pasos</strong>
               <p>
-                Usa este modulo para invitar usuarios y mantener membresias del negocio. Para administrar fichas laborales ve a Personal, y para permisos administrativos usa Roles y permisos.
+                Crea un acceso nuevo por correo y define el rol base desde aquí. Para gestionar fichas laborales usa Personal; para permisos administrativos detallados usa Roles y permisos.
               </p>
             </div>
             <div className="admin-form-actions admin-form-actions--inline">
@@ -245,16 +314,16 @@ export function TeamPage() {
                 Ir a Personal
               </Button>
               <Button variant="secondary" onClick={() => navigate('/roles')}>
-                Ir a Roles
+                Ir a Roles y permisos
               </Button>
             </div>
           </div>
 
           <div className="inventory-section__header">
             <div>
-              <p className="section-kicker">Invitar usuario</p>
-              <h3>Nuevo acceso por correo</h3>
-              <p>Replica el flujo mobile para invitar trabajadores al minimarket.</p>
+              <p className="section-kicker">Nuevo acceso</p>
+              <h3>Invitar por correo</h3>
+              <p>Asigna un rol base y deja listo el ingreso al sistema.</p>
             </div>
           </div>
 
@@ -293,56 +362,71 @@ export function TeamPage() {
           {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
 
           <Button onClick={() => void handleInvite()} disabled={isSubmitting}>
-            {isSubmitting ? 'Invitando...' : 'Invitar por correo'}
+            {isSubmitting ? 'Enviando invitación...' : 'Invitar usuario'}
           </Button>
         </section>
 
         <section className="surface-card">
           <div className="inventory-section__header">
             <div>
-              <p className="section-kicker">Invitaciones pendientes</p>
-              <h3>Seguimiento del equipo</h3>
-              <p>Visibilidad simple de correos, rol base y estado de la invitacion.</p>
+              <p className="section-kicker">Búsqueda y filtros</p>
+              <h3>Encontrar accesos rápido</h3>
+              <p>Ubica usuarios o invitaciones por nombre, correo, rol o estado.</p>
             </div>
           </div>
 
-          <div className="reports-web__list">
-            {invitations.length ? (
-              invitations.map((invitation) => (
-                <article key={invitation.id} className="report-list__item">
-                  <div>
-                    <strong>{invitation.fullName || invitation.email}</strong>
-                    <p>
-                      {invitation.email} · {roleLabels[invitation.role]} · {invitation.status}
-                    </p>
-                  </div>
-                  <span className="status-chip status-chip--muted">
-                    {new Date(invitation.createdAt).toLocaleDateString('es-CL')}
-                  </span>
-                </article>
-              ))
-            ) : (
-              <article className="products-empty">
-                <strong>No hay invitaciones pendientes.</strong>
-                <p>Las nuevas invitaciones apareceran en este panel.</p>
-              </article>
-            )}
+          <Field
+            label="Buscar"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Buscar por nombre, correo, rol o código visible"
+          />
+
+          <div className="admin-role-row">
+            {accessStatusOptions.map((option) => (
+              <Button
+                key={option}
+                variant={statusFilter === option ? 'primary' : 'secondary'}
+                onClick={() => setStatusFilter(option)}
+              >
+                {option === 'todos'
+                  ? 'Todos'
+                  : option === 'activos'
+                    ? 'Activos'
+                    : 'Pendientes'}
+              </Button>
+            ))}
           </div>
+
+          <div className="dashboard-context-grid">
+            <div>
+              <span>Usuarios filtrados</span>
+              <strong>{filteredMembers.length}</strong>
+            </div>
+            <div>
+              <span>Invitaciones filtradas</span>
+              <strong>{filteredInvitations.length}</strong>
+            </div>
+          </div>
+
+          <AdminNotice tone="info" title="Base para la siguiente mejora">
+            {futureImprovements.join(' ')}
+          </AdminNotice>
         </section>
       </div>
 
       <section className="surface-card">
         <div className="inventory-section__header">
           <div>
-            <p className="section-kicker">Miembros</p>
-            <h3>Roles y permisos</h3>
-            <p>Owner no se edita desde esta vista, igual que en mobile.</p>
+            <p className="section-kicker">Usuarios del negocio</p>
+            <h3>Acceso, rol y permisos</h3>
+            <p>Revisa rápido quién tiene acceso, qué rol usa y qué puede hacer.</p>
           </div>
         </div>
 
         <div className="admin-members-list">
-          {members.length ? (
-            members.map((memberItem) => {
+          {filteredMembers.length ? (
+            filteredMembers.map((memberItem) => {
               const isOwner = ownerIdSet.has(memberItem.userId)
               const effectiveRole = getEffectiveRole(memberItem.id, memberItem.role)
               const effectivePermissions = getEffectivePermissions(
@@ -356,10 +440,10 @@ export function TeamPage() {
                   <div className="admin-member-card__header">
                     <div>
                       <strong>
-                        {isOwner ? 'Owner principal' : `Usuario ${memberItem.userId.slice(0, 8)}`}
+                        {isOwner ? 'Propietario principal' : `Usuario ${memberItem.userId.slice(0, 8)}`}
                       </strong>
                       <p>
-                        Rol base: {roleLabels[memberItem.role]}
+                        Rol asignado: {roleLabels[memberItem.role]}
                         {memberItem.visibleCode ? ` · ${memberItem.visibleCode}` : ''}
                       </p>
                     </div>
@@ -420,13 +504,13 @@ export function TeamPage() {
                         disabled={savingMemberId === memberItem.id}
                       >
                         {savingMemberId === memberItem.id
-                          ? 'Guardando permisos...'
-                          : 'Guardar permisos'}
+                          ? 'Guardando cambios...'
+                          : 'Guardar cambios'}
                       </Button>
                     </>
                   ) : (
                     <p className="field__hint">
-                      El owner mantiene control total y no se edita desde esta vista.
+                      El propietario mantiene control total y no se edita desde esta vista.
                     </p>
                   )}
                 </article>
@@ -434,8 +518,41 @@ export function TeamPage() {
             })
           ) : (
             <article className="products-empty">
-              <strong>Todavia no hay miembros asociados.</strong>
-              <p>Invita al equipo para empezar a configurar accesos.</p>
+              <strong>No encontramos usuarios con ese filtro.</strong>
+              <p>Ajusta la búsqueda o cambia el estado para ver más accesos.</p>
+            </article>
+          )}
+        </div>
+      </section>
+
+      <section className="surface-card">
+        <div className="inventory-section__header">
+          <div>
+            <p className="section-kicker">Invitaciones</p>
+            <h3>Accesos pendientes</h3>
+            <p>Seguimiento simple de correo, rol asignado y estado de ingreso.</p>
+          </div>
+        </div>
+
+        <div className="reports-web__list">
+          {filteredInvitations.length ? (
+            filteredInvitations.map((invitation) => (
+              <article key={invitation.id} className="report-list__item">
+                <div>
+                  <strong>{invitation.fullName || invitation.email}</strong>
+                  <p>
+                    {invitation.email} · {roleLabels[invitation.role]} · {invitation.status}
+                  </p>
+                </div>
+                <span className="status-chip status-chip--muted">
+                  {new Date(invitation.createdAt).toLocaleDateString('es-CL')}
+                </span>
+              </article>
+            ))
+          ) : (
+            <article className="products-empty">
+              <strong>No hay invitaciones pendientes con ese filtro.</strong>
+              <p>Las nuevas invitaciones aparecerán aquí cuando sean creadas.</p>
             </article>
           )}
         </div>
