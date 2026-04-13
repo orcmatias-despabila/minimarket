@@ -4,6 +4,8 @@ import { useWebAuth } from './auth/AuthProvider'
 import { WebAppShell } from './layout/AppShell'
 import {
   canAccessWebModule,
+  getAccessibleWebModules,
+  getDefaultWebModule,
   getWebModulePathById,
   type WebModuleId,
   webModules,
@@ -77,6 +79,7 @@ export function WebAppRouter() {
     hasPermission,
     currentRole,
   } = useWebWorkspace()
+  const accessContext = { currentRole, hasPermission }
 
   const canAccess = (moduleId: WebModuleId) => {
     const module = webModules.find((item) => item.id === moduleId)
@@ -84,14 +87,12 @@ export function WebAppRouter() {
       return false
     }
 
-    return canAccessWebModule(module, { currentRole, hasPermission })
+    return canAccessWebModule(module, accessContext)
   }
 
-  const visibleModules = webModules.filter((module) =>
-    canAccessWebModule(module, { currentRole, hasPermission }),
-  )
+  const visibleModules = getAccessibleWebModules(accessContext)
   const fallbackDashboardPath = getWebModulePathById('dashboard') ?? '/dashboard'
-  const defaultRoute = visibleModules.find((module) => module.id === 'dashboard') ?? visibleModules[0]
+  const defaultRoute = getDefaultWebModule(accessContext)
   const shouldBlockForWorkspace =
     isWorkspaceLoading && !business && pendingInvitations.length === 0
 

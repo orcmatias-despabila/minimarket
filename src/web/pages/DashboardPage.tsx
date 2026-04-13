@@ -15,7 +15,7 @@ import type {
 } from '../types/adminReport'
 import type { AdminCustomer } from '../types/adminCustomer'
 import type { AdminDocument } from '../types/adminDocument'
-import { webModules } from '../navigation/modules'
+import { getAccessibleWebModules, getWebModulePathById } from '../navigation/modules'
 import type { AdminSupplier } from '../types/adminSupplier'
 import { useWebWorkspace } from '../workspace/WorkspaceProvider'
 
@@ -118,14 +118,10 @@ export function DashboardPage() {
     void loadDashboard()
   }, [business?.id])
 
-  const visibleModules = webModules.filter((module) => {
-    if (module.id === 'dashboard') return false
-    if (module.allowedRoles?.length && (!currentRole || !module.allowedRoles.includes(currentRole))) {
-      return false
-    }
-    if (!module.requiredPermissions?.length) return true
-    return module.requiredPermissions.some((permission) => hasPermission(permission))
-  })
+  const visibleModules = getAccessibleWebModules({ currentRole, hasPermission }).filter(
+    (module) => module.id !== 'dashboard',
+  )
+  const reportsPath = getWebModulePathById('reports') ?? '/reports'
 
   const backofficeModules = visibleModules.filter((module) => module.group === 'backoffice')
   const operationsModules = visibleModules.filter((module) => module.group === 'operations')
@@ -303,7 +299,7 @@ export function DashboardPage() {
               <h3>Ultimos documentos</h3>
               <p>Resumen breve de la actividad documental mas reciente del negocio.</p>
             </div>
-            <Link to="/reports" className="dashboard-link-card__action">
+            <Link to={reportsPath} className="dashboard-link-card__action">
               Ver reportes
             </Link>
           </div>

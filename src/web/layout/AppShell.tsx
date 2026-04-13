@@ -2,11 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import {
-  canAccessWebModule,
+  getAccessibleWebNavigationAreas,
+  getAccessibleWebModules,
   getWebModulePathById,
   getWebModuleByPath,
-  webModules,
-  webNavigationAreas,
 } from '../navigation/modules'
 import { useWebAuth } from '../auth/AuthProvider'
 import { useWebWorkspace } from '../workspace/WorkspaceProvider'
@@ -75,19 +74,20 @@ export function WebAppShell() {
     }
   }, [isMobileSidebarOpen, isMobileViewport])
 
-  const canAccessModule = (module: (typeof webModules)[number]) =>
-    canAccessWebModule(module, { currentRole, hasPermission })
-
-  const visibleModules = webModules.filter(canAccessModule)
+  const accessContext = useMemo(
+    () => ({
+      currentRole,
+      hasPermission,
+    }),
+    [currentRole, hasPermission],
+  )
+  const visibleModules = useMemo(
+    () => getAccessibleWebModules(accessContext),
+    [accessContext],
+  )
   const navigationAreas = useMemo(
-    () =>
-      webNavigationAreas
-        .map((area) => ({
-          ...area,
-          modules: visibleModules.filter((module) => module.areaId === area.id),
-        }))
-        .filter((area) => area.modules.length),
-    [visibleModules],
+    () => getAccessibleWebNavigationAreas(accessContext),
+    [accessContext],
   )
 
   const activeModule = getWebModuleByPath(location.pathname) ?? visibleModules[0]
