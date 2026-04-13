@@ -1,0 +1,31 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true
+  },
+  "include": [
+    "App.tsx",
+    "index.ts",
+    "lib/**/*",
+    "src/mobile/**/*",
+    "src/types/**/*",
+    "src/lib/**/*",
+    "src/core/contracts/**/*",
+    "src/core/database/**/*",
+    "src/core/platform/**/*",
+    "src/core/services/**/*",
+    "src/core/store/**/*",
+    "src/modules/**/state/**/*",
+    "src/modules/**/data/**/*"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "src/legacy-web/**/*",
+    "src/components/**/*",
+    "src/modules/**/components/**/*",
+    "src/modules/**/pages/**/*",
+    "src/main.tsx",
+    "src/index.css"
+  ]
+}

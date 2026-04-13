@@ -1,0 +1,117 @@
+import type { Session, User } from '@supabase/supabase-js'
+import { webSupabaseClient } from '../lib/supabase'
+import type { AuthCredentials, AuthProviderName, AuthResult } from '../types/auth'
+
+const productionWebUrl = 'https://orcmatias-despabila.github.io/'
+
+const getCurrentWebUrl = () => {
+  if (typeof window === 'undefined') {
+    return productionWebUrl
+  }
+
+  const currentUrl = new URL(window.location.href)
+  const isLocalHost =
+    currentUrl.hostname === 'localhost' ||
+    currentUrl.hostname === '127.0.0.1' ||
+    currentUrl.hostname === '0.0.0.0'
+
+  if (isLocalHost) {
+    return productionWebUrl
+  }
+
+  currentUrl.hash = ''
+  currentUrl.search = ''
+  currentUrl.pathname = '/'
+  return currentUrl.toString()
+}
+
+export const getWebAuthRedirectUrl = () => getCurrentWebUrl()
+
+const ensureClient = () => {
+  if (!webSupabaseClient) {
+    throw new Error('Configura Supabase para habilitar autenticacion.')
+  }
+
+  return webSupabaseClient
+}
+
+const toFriendlyAuthError = (error: unknown) => {
+  if (!(error instanceof Error)) {
+    return new Error('No pudimos completar la autenticacion.')
+  }
+
+  const normalized = error.message.toLowerCase()
+
+  if (normalized.includes('invalid login credentials')) {
+    return new Error('Correo o contrasena incorrectos.')
+  }
+
+  if (normalized.includes('email not confirmed')) {
+    return new Error('Debes confirmar tu correo antes de ingresar.')
+  }
+
+  if (normalized.includes('user already registered')) {
+    return new Error('Ese correo ya esta registrado.')
+  }
+
+  if (normalized.includes('otp_expired')) {
+    return new Error('El enlace de confirmacion vencio. Solicita uno nuevo desde el login.')
+  }
+
+  if (normalized.includes('email link is invalid') || normalized.includes('token has expired')) {
+    return new Error('El enlace de acceso ya no es valido. Solicita uno nuevo.')
+  }
+
+  if (normalized.includes('password should be at least')) {
+    return new Error('La contrasena es demasiado corta.')
+  }
+
+  return error
+}
+
+export const webAuthService = {
+  async getSession(): Promise<Session | null> {
+    const client = ensureClient()
+    const { data, error } = await client.auth.getSession()
+    if (error) throw toFriendlyAuthError(error)
+    return data.session
+  },
+
+  async signIn({ email, password }: AuthCredentials): Promise<User> {
+    const client = ensureClient()
+    const { data, error } = await client.auth.signInWithPassword({ email, password })
+    if (error) throw toFriendlyAuthError(error)
+    if (!data.user) {
+      throw new Error('No pudimos iniciar sesion con esa cuenta.')
+    }
+
+    return data.user
+  },
+
+  async signUp({ email, password }: AuthCredentials): Promise<AuthResult> {
+    const client = ensureClient()
+    const { data, error } = await client.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: getWebAuthRedirectUrl(),
+      },
+    })
+    if (error) throw toFriendlyAuthError(error)
+
+    return {
+      user: data.user,
+      session: data.session,
+    }
+  },
+
+  async signOut() {
+    const client = ensureClient()
+    const { error } = await client.auth.signOut()
+    if (error) throw toFriendlyAuthError(error)
+  },
+
+  async signInWithOAuth(provider: AuthProviderName) {
+    throw new Error(`Login con ${provider} aun no esta habilitado en esta fase.`)
+  },
+}
