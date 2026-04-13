@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { useWebAuth } from './auth/AuthProvider'
 import { WebAppShell } from './layout/AppShell'
@@ -42,22 +42,22 @@ import { SuppliersPage } from './pages/SuppliersPage'
 import { TeamPage } from './pages/TeamPage'
 import { useWebWorkspace } from './workspace/WorkspaceProvider'
 
-const modulePages: Record<WebModuleId, ReactNode> = {
-  dashboard: <DashboardPage />,
-  clients: <ClientsPage />,
-  suppliers: <SuppliersPage />,
-  employees: <EmployeesPage />,
-  roles: <RolesPage />,
-  'received-documents': <ReceivedDocumentsPage />,
-  'issued-documents': <IssuedDocumentsPage />,
-  'credit-notes': <CreditNotesPage />,
-  reports: <ReportsPage />,
-  settings: <SettingsPage />,
-  team: <TeamPage />,
-  sales: <SalesPage />,
-  products: <ProductsPage />,
-  inventory: <InventoryPage />,
-  cash: <CashPage />,
+const modulePages: Record<WebModuleId, ComponentType> = {
+  dashboard: DashboardPage,
+  clients: ClientsPage,
+  suppliers: SuppliersPage,
+  employees: EmployeesPage,
+  roles: RolesPage,
+  'received-documents': ReceivedDocumentsPage,
+  'issued-documents': IssuedDocumentsPage,
+  'credit-notes': CreditNotesPage,
+  reports: ReportsPage,
+  settings: SettingsPage,
+  team: TeamPage,
+  sales: SalesPage,
+  products: ProductsPage,
+  inventory: InventoryPage,
+  cash: CashPage,
 }
 
 const toChildPath = (path: string) => path.replace(/^\//, '')
@@ -121,7 +121,10 @@ export function WebAppRouter() {
                 path={toChildPath(module.path)}
                 element={
                   canAccess(module.id) ? (
-                    modulePages[module.id]
+                    (() => {
+                      const ModulePage = modulePages[module.id]
+                      return <ModulePage />
+                    })()
                   ) : (
                     <Navigate to={defaultRoute?.path ?? '/dashboard'} replace />
                   )
