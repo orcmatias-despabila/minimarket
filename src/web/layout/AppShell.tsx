@@ -195,6 +195,8 @@ export function WebAppShell() {
       groupedSections.some((section) => section.sectionLabel.toLowerCase() !== area.label.toLowerCase())
     const isAreaOpen = areaOpenState[area.id] ?? area.id === activeArea?.id
     const isAreaActive = area.id === activeArea?.id
+    const primaryModule = area.modules[0]
+    const shouldShowAreaToggle = area.modules.length > 1
 
     return (
       <section
@@ -202,30 +204,49 @@ export function WebAppShell() {
         className={`sidebar__section ${isAreaOpen ? 'sidebar__section--open' : 'sidebar__section--closed'} ${isAreaActive ? 'sidebar__section--active' : ''}`.trim()}
       >
         <div className="sidebar__section-header">
-          <button
-            type="button"
-            className="sidebar__section-trigger"
+          <NavLink
+            to={primaryModule.path}
+            className={({ isActive }) =>
+              `sidebar__section-trigger ${isActive ? 'sidebar__section-trigger--active' : ''}`.trim()
+            }
             onClick={() => {
-              setAreaOpenState((current) => ({
-                ...current,
-                [area.id]: !(current[area.id] ?? area.id === activeArea?.id),
-              }))
+              if (isMobileViewport) {
+                setIsMobileSidebarOpen(false)
+              }
             }}
-            aria-expanded={isAreaOpen}
-            aria-controls={`sidebar-area-${area.id}`}
           >
             <span className="sidebar__section-heading">
               <span className="sidebar__section-title">{area.label}</span>
               <span className="sidebar__section-meta">{area.description}</span>
             </span>
-            <span
-              className={`sidebar__section-chevron ${isAreaOpen ? 'sidebar__section-chevron--open' : ''}`.trim()}
-              aria-hidden="true"
-            />
-          </button>
+          </NavLink>
+
+          {shouldShowAreaToggle ? (
+            <button
+              type="button"
+              className="sidebar__section-toggle"
+              onClick={() => {
+                setAreaOpenState((current) => ({
+                  ...current,
+                  [area.id]: !(current[area.id] ?? area.id === activeArea?.id),
+                }))
+              }}
+              aria-expanded={isAreaOpen}
+              aria-controls={`sidebar-area-${area.id}`}
+              aria-label={isAreaOpen ? `Ocultar ${area.label}` : `Mostrar ${area.label}`}
+            >
+              <span
+                className={`sidebar__section-chevron ${isAreaOpen ? 'sidebar__section-chevron--open' : ''}`.trim()}
+                aria-hidden="true"
+              />
+            </button>
+          ) : null}
         </div>
 
-        <div id={`sidebar-area-${area.id}`} className="sidebar__section-body">
+        <div
+          id={`sidebar-area-${area.id}`}
+          className={`sidebar__section-body ${shouldShowAreaToggle ? '' : 'sidebar__section-body--static'}`.trim()}
+        >
           {groupedSections.map((section) => (
             <div key={section.sectionLabel} className="sidebar__cluster">
               {shouldShowSectionTitle ? (
