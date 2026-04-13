@@ -209,6 +209,8 @@ export function WebAppShell() {
             className={({ isActive }) =>
               `sidebar__section-trigger ${isActive ? 'sidebar__section-trigger--active' : ''}`.trim()
             }
+            title={area.label}
+            aria-label={area.label}
             onClick={() => {
               if (isMobileViewport) {
                 setIsMobileSidebarOpen(false)
@@ -265,6 +267,7 @@ export function WebAppShell() {
                     `sidebar__link ${isActive ? 'sidebar__link--active' : ''}`.trim()
                   }
                   title={module.label}
+                  aria-label={`${module.label}. ${module.description}`}
                 >
                   <span className="sidebar__link-badge" aria-hidden="true">
                     {module.navBadge}

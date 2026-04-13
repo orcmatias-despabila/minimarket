@@ -252,14 +252,22 @@
 .sidebar__section-body--static{max-height:none;overflow:visible}
 .sidebar__section--closed .sidebar__section-body{max-height:0;opacity:0;pointer-events:none}
 .sidebar__section--active .sidebar__section-title,.sidebar__section--active .sidebar__section-trigger{color:#102033}
-.sidebar__link{box-shadow:none;transition:border-color .18s ease,background-color .18s ease,transform .18s ease}
+.sidebar__link{box-shadow:none;transition:border-color .18s ease,background-color .18s ease,transform .18s ease;text-decoration:none}
 .sidebar__link:hover{border-color:#1d4ed847;background:#f8fbffe8}
+.sidebar__link-badge{display:inline-grid;place-items:center;min-width:42px;height:42px;border-radius:14px;font-size:.78rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
 .sidebar__link-copy strong{font-size:.98rem;line-height:1.25}
 .sidebar__link-copy span{font-size:.9rem;line-height:1.35}
 @media (max-width:1279px){.sidebar__section-meta{max-width:17rem}}
 .app-layout--compact .sidebar__section-header{display:none}
 .app-layout--compact .sidebar__section-body{display:grid!important;max-height:none!important;opacity:1!important;overflow:visible!important;pointer-events:auto!important}
 .app-layout--compact .sidebar__section{padding:0;border-bottom:none}
+.app-layout--compact .sidebar__nav{gap:10px}
+.app-layout--compact .sidebar__cluster{display:grid;justify-items:center;gap:8px}
+.app-layout--compact .sidebar__link{width:100%;grid-template-columns:1fr;justify-items:center;gap:8px;padding:10px 8px;border-radius:18px;background:#ffffffd9}
+.app-layout--compact .sidebar__link-badge{min-width:46px;width:46px;height:46px;border-radius:16px;box-shadow:inset 0 0 0 1px #bfdbfe}
+.app-layout--compact .sidebar__link--active{background:#eff6ff;border-color:#93c5fd;box-shadow:0 10px 24px #1d4ed814}
+.app-layout--compact .sidebar__link--active .sidebar__link-badge{background:#2563eb;color:#fff;box-shadow:none}
+.app-layout--compact .web-shell__account{padding:12px 10px}
 .web-shell__sidebar-backdrop{position:fixed;inset:0;border:none;background:#0f172a66;backdrop-filter:blur(3px);z-index:30}
 .web-shell__mobile-close,.topbar__mobile-bar{display:none}
 .topbar__menu-button{min-height:44px;padding:10px 14px;border-radius:14px;border:1px solid #cbd5e1;background:#fffffff2;color:#102033;font-weight:700;box-shadow:var(--shadow-soft);cursor:pointer}
