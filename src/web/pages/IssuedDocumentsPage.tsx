@@ -60,7 +60,8 @@ export function IssuedDocumentsPage() {
   const [dateTo, setDateTo] = useState(searchParams.get('dateTo') ?? '')
   const [page, setPage] = useState(Number(searchParams.get('page') ?? '1') || 1)
   const [totalDocuments, setTotalDocuments] = useState(0)
-  const [isHydrating, setIsHydrating] = useState(true)
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(true)
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false)
   const [syncError, setSyncError] = useState<{ title: string; description: string } | null>(null)
   const [feedback, setFeedback] = useState<string | null>(
     (location.state as FeedbackState)?.feedback ?? null,
@@ -68,53 +69,98 @@ export function IssuedDocumentsPage() {
 
   const totalPages = Math.max(1, Math.ceil(totalDocuments / issuedDocumentsPageSize))
   const currentListUrl = `${location.pathname}${location.search}`
+  const hasSearchCriteria = useMemo(
+    () =>
+      Boolean(
+        folioFilter.trim() ||
+          customerFilter !== 'all' ||
+          typeFilter !== 'all' ||
+          statusFilter !== 'all' ||
+          (paymentFilter !== 'all' && paymentFilter) ||
+          dateFrom ||
+          dateTo,
+      ),
+    [customerFilter, dateFrom, dateTo, folioFilter, paymentFilter, statusFilter, typeFilter],
+  )
+  const isHydrating = isLoadingCustomers || isLoadingDocuments
+
+  const loadCustomers = useCallback(async () => {
+    if (!business?.id) {
+      setCustomers([])
+      setCustomerAvailability({ totalActive: 0, totalAll: 0 })
+      setIsLoadingCustomers(false)
+      return
+    }
+
+    setIsLoadingCustomers(true)
+    setSyncError(null)
+
+    try {
+      const customersResult = await Promise.all([
+        adminCustomersService.list({
+          businessId: business.id,
+          page: 1,
+          pageSize: 200,
+          status: 'all',
+        }),
+        adminCustomersService.listAvailableForDocuments(business.id),
+      ])
+
+      setCustomers(customersResult[0].items)
+      setCustomerAvailability({
+        totalActive: customersResult[1].totalActive,
+        totalAll: customersResult[1].totalAll,
+      })
+    } catch (error) {
+      setSyncError(
+        getFriendlyDataError(error, {
+          title: 'No pudimos cargar el modulo',
+          description:
+            'Ocurrio un problema al consultar documentos emitidos y clientes del negocio actual.',
+        }),
+      )
+      setCustomers([])
+      setCustomerAvailability({ totalActive: 0, totalAll: 0 })
+    } finally {
+      setIsLoadingCustomers(false)
+    }
+  }, [business?.id])
 
   const loadDocuments = useCallback(
     async (nextPage = page) => {
       if (!business?.id) {
         setDocuments([])
-        setCustomers([])
-        setCustomerAvailability({ totalActive: 0, totalAll: 0 })
         setTotalDocuments(0)
-        setIsHydrating(false)
+        setIsLoadingDocuments(false)
         return
       }
 
-      setIsHydrating(true)
+      if (!hasSearchCriteria) {
+        setDocuments([])
+        setTotalDocuments(0)
+        setIsLoadingDocuments(false)
+        return
+      }
+
+      setIsLoadingDocuments(true)
       setSyncError(null)
 
       try {
-        const [documentsResult, customersResult] = await Promise.all([
-          adminDocumentsService.list({
-            businessId: business.id,
-            direction: 'emitted',
-            documentType: typeFilter,
-            status: statusFilter,
-            customerId: customerFilter,
-            paymentMethod: paymentFilter || 'all',
-            folio: folioFilter,
-            dateFrom,
-            dateTo,
-            page: nextPage,
-            pageSize: issuedDocumentsPageSize,
-          }),
-          Promise.all([
-            adminCustomersService.list({
-              businessId: business.id,
-              page: 1,
-              pageSize: 200,
-              status: 'all',
-            }),
-            adminCustomersService.listAvailableForDocuments(business.id),
-          ]),
-        ])
+        const documentsResult = await adminDocumentsService.list({
+          businessId: business.id,
+          direction: 'emitted',
+          documentType: typeFilter,
+          status: statusFilter,
+          customerId: customerFilter,
+          paymentMethod: paymentFilter || 'all',
+          folio: folioFilter,
+          dateFrom,
+          dateTo,
+          page: nextPage,
+          pageSize: issuedDocumentsPageSize,
+        })
 
         setDocuments(documentsResult.items.filter((item) => item.direction === 'emitted'))
-        setCustomers(customersResult[0].items)
-        setCustomerAvailability({
-          totalActive: customersResult[1].totalActive,
-          totalAll: customersResult[1].totalAll,
-        })
         setTotalDocuments(documentsResult.total)
       } catch (error) {
         setSyncError(
@@ -124,10 +170,10 @@ export function IssuedDocumentsPage() {
               'Ocurrio un problema al consultar documentos emitidos y clientes del negocio actual.',
           }),
         )
-        setCustomers([])
-        setCustomerAvailability({ totalActive: 0, totalAll: 0 })
+        setDocuments([])
+        setTotalDocuments(0)
       } finally {
-        setIsHydrating(false)
+        setIsLoadingDocuments(false)
       }
     },
     [
@@ -136,12 +182,17 @@ export function IssuedDocumentsPage() {
       dateFrom,
       dateTo,
       folioFilter,
+      hasSearchCriteria,
       page,
       paymentFilter,
       statusFilter,
       typeFilter,
     ],
   )
+
+  useEffect(() => {
+    void loadCustomers()
+  }, [loadCustomers])
 
   useEffect(() => {
     void loadDocuments(page)
@@ -221,6 +272,10 @@ export function IssuedDocumentsPage() {
   )
 
   const pageSummary = useMemo(() => {
+    if (!hasSearchCriteria) {
+      return 'Aplica filtros para buscar documentos'
+    }
+
     if (!totalDocuments) {
       return 'Sin resultados'
     }
@@ -228,7 +283,7 @@ export function IssuedDocumentsPage() {
     const from = (page - 1) * issuedDocumentsPageSize + 1
     const to = Math.min(page * issuedDocumentsPageSize, totalDocuments)
     return `${from}-${to} de ${totalDocuments}`
-  }, [page, totalDocuments])
+  }, [hasSearchCriteria, page, totalDocuments])
 
   const activeFilters = useMemo(() => {
     const filters: Array<{ label: string; value: string }> = []
@@ -283,10 +338,17 @@ export function IssuedDocumentsPage() {
     !hasTechnicalError && customerAvailability.totalAll > 0 && customerAvailability.totalActive === 0
   const hasDocumentResults = documents.length > 0
   const hasFilteredEmpty = !hasTechnicalError && !hasDocumentResults && activeFilters.length > 0
-  const hasInitialEmpty =
+  const hasSearchPrompt =
     !hasTechnicalError &&
     !hasDocumentResults &&
     !activeFilters.length &&
+    !hasNoCustomers &&
+    !hasInactiveCustomers &&
+    !hasSearchCriteria
+  const hasInitialEmpty =
+    !hasTechnicalError &&
+    !hasDocumentResults &&
+    hasSearchCriteria &&
     !hasNoCustomers &&
     !hasInactiveCustomers
 
@@ -350,16 +412,6 @@ export function IssuedDocumentsPage() {
         <AdminFilterToolbar
           title="Busqueda y filtros"
           description="Cruza folio, cliente, fechas, tipo, estado y medio de pago."
-          actions={
-            <Button
-              variant="secondary"
-              onClick={() =>
-                navigate(`/issued-documents/new?returnTo=${encodeURIComponent(currentListUrl)}`)
-              }
-            >
-              Nuevo documento
-            </Button>
-          }
           activeFilters={activeFilters}
           onClearFilters={activeFilters.length ? clearFilters : undefined}
         >
@@ -540,6 +592,12 @@ export function IssuedDocumentsPage() {
               description="Prueba limpiando fechas, cliente, folio, estado o medio de pago."
               actionLabel="Limpiar filtros"
               onAction={clearFilters}
+            />
+          ) : hasSearchPrompt ? (
+            <AdminEmptyState
+              tone="search"
+              title="Busca documentos emitidos con los filtros."
+              description="Para evitar sobrecargar la vista, los documentos se muestran cuando aplicas al menos un criterio como folio, cliente, tipo, estado, fecha o medio de pago."
             />
           ) : hasInitialEmpty ? (
             <AdminEmptyState

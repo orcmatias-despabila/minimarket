@@ -55,7 +55,8 @@ export function ReceivedDocumentsPage() {
   const [dateTo, setDateTo] = useState(searchParams.get('dateTo') ?? '')
   const [page, setPage] = useState(Number(searchParams.get('page') ?? '1') || 1)
   const [totalDocuments, setTotalDocuments] = useState(0)
-  const [isHydrating, setIsHydrating] = useState(true)
+  const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(true)
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false)
   const [syncError, setSyncError] = useState<{ title: string; description: string } | null>(null)
   const [feedback, setFeedback] = useState<string | null>(
     (location.state as FeedbackState)?.feedback ?? null,
@@ -63,51 +64,96 @@ export function ReceivedDocumentsPage() {
 
   const totalPages = Math.max(1, Math.ceil(totalDocuments / receivedDocumentsPageSize))
   const currentListUrl = `${location.pathname}${location.search}`
+  const hasSearchCriteria = useMemo(
+    () =>
+      Boolean(
+        folioFilter.trim() ||
+          supplierFilter !== 'all' ||
+          typeFilter !== 'all' ||
+          statusFilter !== 'all' ||
+          dateFrom ||
+          dateTo,
+      ),
+    [dateFrom, dateTo, folioFilter, statusFilter, supplierFilter, typeFilter],
+  )
+  const isHydrating = isLoadingSuppliers || isLoadingDocuments
+
+  const loadSuppliers = useCallback(async () => {
+    if (!business?.id) {
+      setSuppliers([])
+      setSupplierAvailability({ totalActive: 0, totalAll: 0 })
+      setIsLoadingSuppliers(false)
+      return
+    }
+
+    setIsLoadingSuppliers(true)
+    setSyncError(null)
+
+    try {
+      const suppliersResult = await Promise.all([
+        adminSuppliersService.list({
+          businessId: business.id,
+          page: 1,
+          pageSize: 200,
+          status: 'all',
+        }),
+        adminSuppliersService.listAvailableForDocuments(business.id),
+      ])
+
+      setSuppliers(suppliersResult[0].items)
+      setSupplierAvailability({
+        totalActive: suppliersResult[1].totalActive,
+        totalAll: suppliersResult[1].totalAll,
+      })
+    } catch (error) {
+      setSyncError(
+        getFriendlyDataError(error, {
+          title: 'No pudimos cargar el modulo',
+          description:
+            'Ocurrio un problema al consultar documentos recibidos y proveedores del negocio actual.',
+        }),
+      )
+      setSuppliers([])
+      setSupplierAvailability({ totalActive: 0, totalAll: 0 })
+    } finally {
+      setIsLoadingSuppliers(false)
+    }
+  }, [business?.id])
 
   const loadDocuments = useCallback(
     async (nextPage = page) => {
       if (!business?.id) {
         setDocuments([])
-        setSuppliers([])
         setTotalDocuments(0)
-        setIsHydrating(false)
+        setIsLoadingDocuments(false)
         return
       }
 
-      setIsHydrating(true)
+      if (!hasSearchCriteria) {
+        setDocuments([])
+        setTotalDocuments(0)
+        setIsLoadingDocuments(false)
+        return
+      }
+
+      setIsLoadingDocuments(true)
       setSyncError(null)
 
       try {
-        const [documentsResult, suppliersResult] = await Promise.all([
-          adminDocumentsService.list({
-            businessId: business.id,
-            direction: 'received',
-            documentType: typeFilter,
-            status: statusFilter,
-            supplierId: supplierFilter,
-            folio: folioFilter,
-            dateFrom,
-            dateTo,
-            page: nextPage,
-            pageSize: receivedDocumentsPageSize,
-          }),
-          Promise.all([
-            adminSuppliersService.list({
-              businessId: business.id,
-              page: 1,
-              pageSize: 200,
-              status: 'all',
-            }),
-            adminSuppliersService.listAvailableForDocuments(business.id),
-          ]),
-        ])
+        const documentsResult = await adminDocumentsService.list({
+          businessId: business.id,
+          direction: 'received',
+          documentType: typeFilter,
+          status: statusFilter,
+          supplierId: supplierFilter,
+          folio: folioFilter,
+          dateFrom,
+          dateTo,
+          page: nextPage,
+          pageSize: receivedDocumentsPageSize,
+        })
 
         setDocuments(documentsResult.items.filter((item) => item.direction === 'received'))
-        setSuppliers(suppliersResult[0].items)
-        setSupplierAvailability({
-          totalActive: suppliersResult[1].totalActive,
-          totalAll: suppliersResult[1].totalAll,
-        })
         setTotalDocuments(documentsResult.total)
       } catch (error) {
         setSyncError(
@@ -117,14 +163,28 @@ export function ReceivedDocumentsPage() {
               'Ocurrio un problema al consultar documentos recibidos y proveedores del negocio actual.',
           }),
         )
-        setSuppliers([])
-        setSupplierAvailability({ totalActive: 0, totalAll: 0 })
+        setDocuments([])
+        setTotalDocuments(0)
       } finally {
-        setIsHydrating(false)
+        setIsLoadingDocuments(false)
       }
     },
-    [business?.id, dateFrom, dateTo, folioFilter, page, statusFilter, supplierFilter, typeFilter],
+    [
+      business?.id,
+      dateFrom,
+      dateTo,
+      folioFilter,
+      hasSearchCriteria,
+      page,
+      statusFilter,
+      supplierFilter,
+      typeFilter,
+    ],
   )
+
+  useEffect(() => {
+    void loadSuppliers()
+  }, [loadSuppliers])
 
   useEffect(() => {
     void loadDocuments(page)
@@ -199,6 +259,10 @@ export function ReceivedDocumentsPage() {
   )
 
   const pageSummary = useMemo(() => {
+    if (!hasSearchCriteria) {
+      return 'Aplica filtros para buscar documentos'
+    }
+
     if (!totalDocuments) {
       return 'Sin resultados'
     }
@@ -206,7 +270,7 @@ export function ReceivedDocumentsPage() {
     const from = (page - 1) * receivedDocumentsPageSize + 1
     const to = Math.min(page * receivedDocumentsPageSize, totalDocuments)
     return `${from}-${to} de ${totalDocuments}`
-  }, [page, totalDocuments])
+  }, [hasSearchCriteria, page, totalDocuments])
 
   const activeFilters = useMemo(() => {
     const filters: Array<{ label: string; value: string }> = []
@@ -256,10 +320,17 @@ export function ReceivedDocumentsPage() {
     !hasTechnicalError && supplierAvailability.totalAll > 0 && supplierAvailability.totalActive === 0
   const hasDocumentResults = documents.length > 0
   const hasFilteredEmpty = !hasTechnicalError && !hasDocumentResults && activeFilters.length > 0
-  const hasInitialEmpty =
+  const hasSearchPrompt =
     !hasTechnicalError &&
     !hasDocumentResults &&
     !activeFilters.length &&
+    !hasNoSuppliers &&
+    !hasInactiveSuppliers &&
+    !hasSearchCriteria
+  const hasInitialEmpty =
+    !hasTechnicalError &&
+    !hasDocumentResults &&
+    hasSearchCriteria &&
     !hasNoSuppliers &&
     !hasInactiveSuppliers
 
@@ -333,16 +404,6 @@ export function ReceivedDocumentsPage() {
         <AdminFilterToolbar
           title="Busqueda y filtros"
           description="Cruza folio, proveedor, fechas, tipo y estado documental."
-          actions={
-            <Button
-              variant="secondary"
-              onClick={() =>
-                navigate(`/received-documents/new?returnTo=${encodeURIComponent(currentListUrl)}`)
-              }
-            >
-              Nuevo documento
-            </Button>
-          }
           activeFilters={activeFilters}
           onClearFilters={activeFilters.length ? clearFilters : undefined}
         >
@@ -492,6 +553,12 @@ export function ReceivedDocumentsPage() {
               description="Prueba limpiando proveedor, fechas, folio o estado para ampliar la busqueda."
               actionLabel="Limpiar filtros"
               onAction={clearFilters}
+            />
+          ) : hasSearchPrompt ? (
+            <AdminEmptyState
+              tone="search"
+              title="Busca documentos recibidos con los filtros."
+              description="Para evitar sobrecargar la vista, los documentos se muestran cuando aplicas al menos un criterio como folio, proveedor, tipo, estado o fechas."
             />
           ) : hasInitialEmpty ? (
             <AdminEmptyState
